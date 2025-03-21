@@ -98,7 +98,20 @@ if selected:
     st.write(f"🏢 NOI: €{result['noi']:,.0f}")
     st.write(f"📊 DSCR: {result['dscr']:.2f}")
     
-    df_cf = pd.DataFrame({"Год": list(range(1, years+1)), "Cash Flow (€)": result['cf']})
+    # Проверяем длины списков перед созданием DataFrame
+num_years = years  # Количество лет проекта
+cashflow = result["cf"]
+
+# Гарантируем, что длины списков совпадают
+if len(cashflow) != num_years + 1:  # +1, потому что у нас начальный CAPEX
+    st.error("Ошибка: Размер кэшфлоу не совпадает с количеством лет.")
+    st.write(f"Длина cashflow: {len(cashflow)}, Ожидаемая: {num_years + 1}")
+else:
+    df_cf = pd.DataFrame({
+        "Год": list(range(0, num_years + 1)),  # Добавляем 0-й год (CAPEX)
+        "Cash Flow (€)": cashflow
+    })
+
     fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="📊 Кэшфлоу по фазам проекта")
     st.plotly_chart(fig_cf)
     
