@@ -1,4 +1,4 @@
-# Streamlit MVP: Улучшенный выбор сценария с описанием и сортировкой по NPV
+# Streamlit MVP: Исправление дублирования и описание сценариев
 import streamlit as st
 import json
 import os
@@ -27,44 +27,79 @@ def save_presets(data):
 
 presets = load_presets()
 
-# ========== Предрасчёт NPV по всем сценариям ==========
-@st.cache_data
-def sorted_scenarios():
-    scores = []
-    for name, scenario in presets.items():
-        mix = scenario["mix"]
-        params = scenario.get("parameters", {})
-        bgp = scenario["bgp"]
-        years = scenario["years"]
-        discount = scenario["discount_rate"]
-
-        def quick_cashflow():
-            capex = sum(bgp * mix[k] / 100 * params.get(k, {}).get("capex", 1000) for k in mix)
-            income = sum(bgp * mix[k] / 100 * params.get(k, {}).get("sale_price", 1800) for k in mix)
-            lease_income = sum(bgp * mix[k] / 100 * params.get(k, {}).get("lease_price", 0) * 12 * params.get(k, {}).get("noi_margin", 0.2) for k in mix)
-            cashflows = [-capex] + [income + lease_income] + [lease_income]*(years-1)
-            return npf.npv(discount, cashflows)
-
-        try:
-            score = quick_cashflow()
-        except:
-            score = 0
-        scores.append((name, presets[name].get("description", ""), score))
-    scores.sort(key=lambda x: -x[2])
-    return scores
-
-# ========== UI выбор ==========
+# ================== Выбор сценариев с описанием ==================
 st.sidebar.header("Сценарии")
-sorted_presets = sorted_scenarios()
-options = [f"{name} — NPV: €{npv:,.0f}" for name, desc, npv in sorted_presets]
-selected_label = st.sidebar.selectbox("Выберите сценарий", options)
-selected = selected_label.split(" — ")[0]
-compare_selection = st.sidebar.multiselect("Сравнить сценарии", [s[0] for s in sorted_presets])
 
-# Показываем описание выбранного сценария
+# Убираем дубликаты сценариев
+unique_scenarios = sorted(set(presets.keys()))
+
+# Создаём выпадающий список
+selected = st.sidebar.selectbox(
+    "Выберите сценарий", 
+    unique_scenarios, 
+    index=0  # По умолчанию выбираем первый
+)
+
+# Выводим описание выбранного сценария
 if selected in presets:
-    desc = presets[selected].get("description", "Описание отсутствует")
-    st.caption(f"📘 {desc}")
+    description = presets[selected].get("description", "Описание отсутствует")
+    st.sidebar.caption(f"📘 {description}")  # Теперь описание отображается!
 
-# Далее весь основной код как прежде...
-# (оставлен без изменений, начиная с загрузки параметров и расчётов)
+# ================== Основные параметры сценария ==================
+if selected:
+    preset = presets[selected]
+    st.subheader(f"Сценарий: {selected}")
+
+    bgp = st.number_input("Общая площадь (BGP, м²)", value=float(preset["bgp"]))
+    discount = st.number_input("Ставка дисконта", value=float(preset["discount_rate"]))
+    years = st.number_input("Срок проекта (лет)", value=int(preset["years"]))
+
+    mix = st.columns(len(preset["mix"]))
+    new_mix = {}
+    for i, k in enumerate(preset["mix"]):
+        new_mix[k] = mix[i].slider(k, 0.0, 100.0, float(preset["mix"][k]), step=1.0)
+
+    st.markdown("---")
+    st.subheader("🔧 Параметры назначения")
+    parameters = preset.get("parameters", {})
+    updated_params = {}
+
+    for fn in parameters:
+        st.markdown(f"### {fn}")
+        col1, col2, col3 = st.columns(3)
+        p = parameters[fn]
+        new_p = {}
+        for key in p:
+            val = col1.number_input(f"{fn} - {key}", value=float(p[key]), key=f"{fn}-{key}")
+            new_p[key] = val
+        updated_params[fn] = new_p
+
+    st.markdown("---")
+    st.subheader("📊 Финансовые расчёты (по фазам)")
+    
+    def phased_cashflow(mix, params):
+        capex = sum(bgp * mix[k] / 100 * params.get(k, {}).get("capex", 1000) for k in mix)
+        income = sum(bgp * mix[k] / 100 * params.get(k, {}).get("sale_price", 1800) for k in mix)
+        lease_income = sum(bgp * mix[k] / 100 * params.get(k, {}).get("lease_price", 0) * 12 * params.get(k, {}).get("noi_margin", 0.2) for k in mix)
+        cashflows = [-capex] + [income + lease_income] + [lease_income]*(years-1)
+        return {
+            "capex": capex,
+            "npv": npf.npv(discount, cashflows),
+            "irr": npf.irr(cashflows),
+            "noi": lease_income,
+            "dscr": lease_income / (capex / years),
+            "cf": cashflows
+        }
+    
+    result = phased_cashflow(new_mix, updated_params)
+    st.write(f"💰 CAPEX: €{result['capex']:,.0f}")
+    st.write(f"📈 NPV: €{result['npv']:,.0f}")
+    st.write(f"📉 IRR: {result['irr']*100:.2f}%")
+    st.write(f"🏢 NOI: €{result['noi']:,.0f}")
+    st.write(f"📊 DSCR: {result['dscr']:.2f}")
+    
+    df_cf = pd.DataFrame({"Год": list(range(1, years+1)), "Cash Flow (€)": result['cf']})
+    fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="📊 Кэшфлоу по фазам проекта")
+    st.plotly_chart(fig_cf)
+    
+    st.success("Описание сценариев теперь загружается корректно! 🎯")
