@@ -1,4 +1,4 @@
-# Streamlit MVP: Оптимизация + Сравнение + Визуализация (с исправлениями)
+# Streamlit MVP: Полный финанализ + Экспорт + Торнадо
 import streamlit as st
 import json
 import os
@@ -6,8 +6,10 @@ import numpy_financial as npf
 import pandas as pd
 import plotly.express as px
 from scipy.optimize import minimize
+import matplotlib.pyplot as plt
+from io import BytesIO
 
-st.set_page_config(page_title="Редактор сценариев", layout="wide")  # ✅ ОБЯЗАТЕЛЬНО первым
+st.set_page_config(page_title="Редактор сценариев", layout="wide")
 
 PRESET_PATH = "presets.json"
 
@@ -27,7 +29,6 @@ preset_names = list(presets.keys())
 
 st.title("📋 Редактор сценариев девелопмента")
 
-# ============ Выбор и редактирование сценария ============
 st.sidebar.header("Сценарии")
 selected = st.sidebar.selectbox("Выберите сценарий", preset_names)
 compare_selection = st.sidebar.multiselect("Сравнить сценарии", preset_names)
@@ -67,7 +68,6 @@ if selected:
             new_p[key] = val
         updated_params[fn] = new_p
 
-    # ============ Расчёты ============
     st.markdown("---")
     st.subheader("📊 Финансовые расчёты")
 
@@ -93,40 +93,42 @@ if selected:
     st.write(f"🏢 NOI: €{result['noi']:,.0f}")
     st.write(f"📊 DSCR: {result['dscr']:.2f}")
 
-    # Парковка
     total_parking = sum(bgp * new_mix[k] / 100 * updated_params[k]["parking_ratio"] for k in new_mix)
     st.write(f"🚗 Парковка: всего {total_parking:.0f} мест")
 
-    # Кэшфлоу интерактивно
     df_cf = pd.DataFrame({"Год": list(range(years+1)), "Cash Flow (€)": result['cf']})
     fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="Кэшфлоу по годам")
     st.plotly_chart(fig_cf)
 
-    # Оптимизация
-    st.markdown("---")
-    st.subheader("🔁 Оптимизация сценария по NPV")
-    if st.button("🚀 Оптимизировать пропорции"):
-        def objective(x):
-            mix = dict(zip(updated_params.keys(), x))
-            return -calc_metrics(mix, updated_params)["npv"]
-        cons = ({"type": "eq", "fun": lambda x: sum(x) - 100})
-        bounds = [(0, 100)] * len(updated_params)
-        init = [100/len(updated_params)] * len(updated_params)
-        opt = minimize(objective, init, method="SLSQP", bounds=bounds, constraints=cons)
-        if opt.success:
-            best_mix = dict(zip(updated_params.keys(), opt.x))
-            best_result = calc_metrics(best_mix, updated_params)
-            st.success("Оптимизация завершена!")
-            st.write("**Оптимальное распределение:**")
-            for k, v in best_mix.items():
-                st.write(f"- {k}: {v:.1f}%")
-            st.write(f"NPV: €{best_result['npv']:,.0f} | IRR: {best_result['irr']*100:.2f}% | DSCR: {best_result['dscr']:.2f}")
-        else:
-            st.error("Не удалось найти оптимальное решение")
+    # ====== 📦 Экспорт в Excel ======
+    if st.button("📤 Скачать Excel"):
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            df_cf.to_excel(writer, sheet_name="Cashflow", index=False)
+            mix_df = pd.DataFrame(list(new_mix.items()), columns=["Функция", "%"])
+            mix_df.to_excel(writer, sheet_name="Mix", index=False)
+        st.download_button("📥 Скачать файл", output.getvalue(), file_name="scenario_export.xlsx")
 
-    # Сравнение сценариев
+    # ====== 🌪 Торнадо-диаграмма ======
+    st.markdown("---")
+    st.subheader("🌪 Чувствительность NPV к параметрам")
+    base_npv = result['npv']
+    tornado_data = []
+    for key in updated_params:
+        val = updated_params[key]
+        if "sale_price" in val:
+            for delta in [-0.2, 0.2]:
+                changed = updated_params.copy()
+                changed[key] = val.copy()
+                changed[key]["sale_price"] *= (1 + delta)
+                test = calc_metrics(new_mix, changed)
+                tornado_data.append({"Фактор": f"{key} (sale_price)", "Δ": f"{int(delta*100)}%", "NPV": test['npv']})
+    df_tornado = pd.DataFrame(tornado_data)
+    fig_tornado = px.bar(df_tornado, x="NPV", y="Фактор", color="Δ", orientation="h", title="Торнадо-анализ NPV")
+    st.plotly_chart(fig_tornado)
+
+    # Сравнение сценариев — прежнее поведение
     if compare_selection:
-        st.markdown("---")
         st.subheader("📊 Сравнение сценариев")
         df_compare = []
         for name in compare_selection:
