@@ -1,4 +1,4 @@
-# Streamlit MVP: Полный финанализ + Экспорт + Торнадо
+# Streamlit MVP: Добавлены фазы доходов/расходов (Construction, Operation, Exit)
 import streamlit as st
 import json
 import os
@@ -41,6 +41,9 @@ if selected:
     discount = st.number_input("Ставка дисконта", value=float(preset["discount_rate"]))
     years = st.number_input("Срок проекта (лет)", value=int(preset["years"]))
 
+    construction_years = st.number_input("⛏️ Срок строительства (лет)", min_value=1, max_value=years, value=2)
+    sales_years = st.number_input("💼 Годы продаж (лет)", min_value=1, max_value=years, value=3)
+
     mix = st.columns(len(preset["mix"]))
     new_mix = {}
     for i, k in enumerate(preset["mix"]):
@@ -69,84 +72,41 @@ if selected:
         updated_params[fn] = new_p
 
     st.markdown("---")
-    st.subheader("📊 Финансовые расчёты")
+    st.subheader("📊 Финансовые расчёты (по фазам)")
 
-    def calc_metrics(mix, params):
+    def phased_cashflow(mix, params):
         capex = sum(bgp * mix[k] / 100 * params[k]["capex"] for k in mix)
         income = sum(bgp * mix[k] / 100 * params[k].get("sale_price", 0) for k in mix)
         lease_income = sum(bgp * mix[k] / 100 * params[k].get("lease_price", 0) * 12 * params[k].get("noi_margin", 0) for k in mix)
-        op_income = lease_income
-        cashflows = [-capex] + [income + lease_income] + [lease_income]*(years-1)
+
+        cashflows = []
+        for y in range(1, years + 1):
+            if y <= construction_years:
+                cashflows.append(-capex / construction_years)
+            elif y <= construction_years + sales_years:
+                cf = income / sales_years + lease_income
+                cashflows.append(cf)
+            else:
+                cashflows.append(lease_income)
+
         return {
             "capex": capex,
-            "npv": npf.npv(discount, cashflows),
+            "npv": npf.npv(discount, [-capex / construction_years] * construction_years + cashflows[construction_years:]),
             "irr": npf.irr(cashflows),
             "noi": lease_income,
             "dscr": lease_income / (capex / years),
             "cf": cashflows
         }
 
-    result = calc_metrics(new_mix, updated_params)
+    result = phased_cashflow(new_mix, updated_params)
     st.write(f"💰 CAPEX: €{result['capex']:,.0f}")
     st.write(f"📈 NPV: €{result['npv']:,.0f}")
     st.write(f"📉 IRR: {result['irr']*100:.2f}%")
     st.write(f"🏢 NOI: €{result['noi']:,.0f}")
     st.write(f"📊 DSCR: {result['dscr']:.2f}")
 
-    total_parking = sum(bgp * new_mix[k] / 100 * updated_params[k]["parking_ratio"] for k in new_mix)
-    st.write(f"🚗 Парковка: всего {total_parking:.0f} мест")
-
-    df_cf = pd.DataFrame({"Год": list(range(years+1)), "Cash Flow (€)": result['cf']})
-    fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="Кэшфлоу по годам")
+    df_cf = pd.DataFrame({"Год": list(range(1, years+1)), "Cash Flow (€)": result['cf']})
+    fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="📊 Кэшфлоу по фазам проекта")
     st.plotly_chart(fig_cf)
 
-    # ====== 📦 Экспорт в Excel ======
-    if st.button("📤 Скачать Excel"):
-        output = BytesIO()
-        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-            df_cf.to_excel(writer, sheet_name="Cashflow", index=False)
-            mix_df = pd.DataFrame(list(new_mix.items()), columns=["Функция", "%"])
-            mix_df.to_excel(writer, sheet_name="Mix", index=False)
-        st.download_button("📥 Скачать файл", output.getvalue(), file_name="scenario_export.xlsx")
-
-    # ====== 🌪 Торнадо-диаграмма ======
-    st.markdown("---")
-    st.subheader("🌪 Чувствительность NPV к параметрам")
-    base_npv = result['npv']
-    tornado_data = []
-    for key in updated_params:
-        val = updated_params[key]
-        if "sale_price" in val:
-            for delta in [-0.2, 0.2]:
-                changed = updated_params.copy()
-                changed[key] = val.copy()
-                changed[key]["sale_price"] *= (1 + delta)
-                test = calc_metrics(new_mix, changed)
-                tornado_data.append({"Фактор": f"{key} (sale_price)", "Δ": f"{int(delta*100)}%", "NPV": test['npv']})
-    df_tornado = pd.DataFrame(tornado_data)
-    fig_tornado = px.bar(df_tornado, x="NPV", y="Фактор", color="Δ", orientation="h", title="Торнадо-анализ NPV")
-    st.plotly_chart(fig_tornado)
-
-    # Сравнение сценариев — прежнее поведение
-    if compare_selection:
-        st.subheader("📊 Сравнение сценариев")
-        df_compare = []
-        for name in compare_selection:
-            p = presets[name]
-            m = calc_metrics(p["mix"], p.get("parameters", default_params))
-            df_compare.append({"Сценарий": name, "NPV": m["npv"], "IRR": m["irr"]*100, "CAPEX": m["capex"], "DSCR": m["dscr"]})
-        df = pd.DataFrame(df_compare)
-        st.dataframe(df.style.format({"NPV": "€{:.0f}", "IRR": "{:.2f}%", "CAPEX": "€{:.0f}", "DSCR": "{:.2f}"}))
-        fig = px.bar(df, x="Сценарий", y="NPV", color="Сценарий", title="Сравнение по NPV")
-        st.plotly_chart(fig)
-
-    if st.button("💾 Сохранить изменения"):
-        presets[selected] = {
-            "bgp": bgp,
-            "discount_rate": discount,
-            "years": years,
-            "mix": new_mix,
-            "parameters": updated_params
-        }
-        save_presets(presets)
-        st.success("Сценарий обновлён")
+    st.success("Фазы учтены: Строительство, Продажа, Операции")
