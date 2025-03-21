@@ -1,4 +1,4 @@
-# Streamlit MVP: Оптимизация + Сравнение + Визуализация
+# Streamlit MVP: Оптимизация + Сравнение + Визуализация (с исправлениями)
 import streamlit as st
 import json
 import os
@@ -6,6 +6,8 @@ import numpy_financial as npf
 import pandas as pd
 import plotly.express as px
 from scipy.optimize import minimize
+
+st.set_page_config(page_title="Редактор сценариев", layout="wide")  # ✅ ОБЯЗАТЕЛЬНО первым
 
 PRESET_PATH = "presets.json"
 
@@ -23,7 +25,6 @@ def save_presets(data):
 presets = load_presets()
 preset_names = list(presets.keys())
 
-st.set_page_config(page_title="Редактор сценариев", layout="wide")
 st.title("📋 Редактор сценариев девелопмента")
 
 # ============ Выбор и редактирование сценария ============
