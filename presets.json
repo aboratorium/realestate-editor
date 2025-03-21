@@ -1,0 +1,14 @@
+{
+  "default": {
+    "bgp": 15000,
+    "discount_rate": 0.08,
+    "years": 10,
+    "mix": {
+      "Stan": 40,
+      "Hotel": 20,
+      "Turistički objekti": 15,
+      "Poslovni prostor": 15,
+      "Restorani": 10
+    }
+  }
+}
