@@ -1,14 +1,35 @@
 {
-  "default": {
-    "bgp": 15000,
+  "Scenario 1": {
+    "bgp": 20000,
     "discount_rate": 0.08,
     "years": 10,
+    "description": "🏢 Смешанный жилой и коммерческий проект",
+    "mix": {
+      "Stan": 50,
+      "Hotel": 20,
+      "Turistički objekti": 10,
+      "Poslovni prostor": 15,
+      "Restorani": 5
+    },
+    "parameters": {
+      "Stan": { "capex": 950, "sale_price": 2100, "parking_ratio": 0.01 },
+      "Hotel": { "capex": 3500, "revpar": 200, "occupancy": 0.5, "noi_margin": 0.25, "parking_ratio": 0.01 },
+      "Turistički objekti": { "capex": 1250, "revpar": 95, "occupancy": 0.45, "noi_margin": 0.18, "parking_ratio": 0.008 },
+      "Poslovni prostor": { "capex": 1100, "sale_price": 1800, "lease_price": 14, "noi_margin": 0.23, "parking_ratio": 0.016 },
+      "Restorani": { "capex": 1200, "lease_price": 18, "noi_margin": 0.28, "parking_ratio": 0.033 }
+    }
+  },
+  "Scenario 2": {
+    "bgp": 15000,
+    "discount_rate": 0.09,
+    "years": 8,
+    "description": "🏨 Туристический кластер с апартаментами и отелем",
     "mix": {
       "Stan": 40,
-      "Hotel": 20,
+      "Hotel": 35,
       "Turistički objekti": 15,
-      "Poslovni prostor": 15,
-      "Restorani": 10
+      "Poslovni prostor": 5,
+      "Restorani": 5
     }
   }
 }
