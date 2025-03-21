@@ -34,12 +34,8 @@ st.sidebar.header("Сценарии")
 if not presets:
     st.sidebar.error("❌ Нет доступных сценариев. Проверьте `presets.json` в GitHub.")
 else:
-    unique_scenarios = list(presets.keys())  # Загружаем все ключи
-    unique_scenarios.sort()  # Сортируем
-    
-    selected = st.sidebar.selectbox(
-        "Выберите сценарий", unique_scenarios, index=0
-    )
+    unique_scenarios = sorted(presets.keys())  # Берём все ключи
+    selected = st.sidebar.selectbox("Выберите сценарий", unique_scenarios, index=0)
 
     if selected in presets:
         description = presets[selected].get("description", "Описание отсутствует")
