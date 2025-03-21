@@ -30,12 +30,24 @@ presets = load_presets()
 # ================== Выбор сценариев ==================
 st.sidebar.header("Сценарии")
 
-# Проверка: если нет сценариев, показываем сообщение
+# Загружаем JSON-файл
 if not presets:
-    st.sidebar.error("❌ Нет доступных сценариев. Добавьте `presets.json` в GitHub.")
+    st.sidebar.error("❌ Нет доступных сценариев. Проверьте `presets.json` в GitHub.")
 else:
-    unique_scenarios = sorted(set(presets.keys()))
-    selected = st.sidebar.selectbox("Выберите сценарий", unique_scenarios, index=0)
+    unique_scenarios = list(presets.keys())  # Загружаем все ключи
+    unique_scenarios.sort()  # Сортируем
+    
+    selected = st.sidebar.selectbox(
+        "Выберите сценарий", unique_scenarios, index=0
+    )
+
+    if selected in presets:
+        description = presets[selected].get("description", "Описание отсутствует")
+        st.sidebar.caption(f"📘 {description}")
+
+        st.write(f"### 📊 Выбран сценарий: {selected}")
+    else:
+        st.sidebar.warning("⚠️ Сценарий не найден в `presets.json`.")
 
     # Выводим описание выбранного сценария
     description = presets[selected].get("description", "Описание отсутствует")
