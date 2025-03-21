@@ -27,6 +27,15 @@ def save_presets(data):
 
 presets = load_presets()
 
+# ================== 🔍 Проверка JSON ==================
+st.sidebar.subheader("📂 Отладка сценариев")
+
+# Проверяем, что JSON загружается
+if not presets:
+    st.sidebar.error("❌ presets.json не загружен!")
+else:
+    st.sidebar.write(f"🔹 Загружено сценариев: {len(presets)}")
+    st.sidebar.write(f"🔹 Сценарии: {list(presets.keys())}")
 # ================== Выбор сценариев ==================
 st.sidebar.header("Сценарии")
 
