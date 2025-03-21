@@ -2,7 +2,8 @@
 import streamlit as st
 import json
 import os
-
+# ✅ ВАЖНО: set_page_config ДОЛЖЕН БЫТЬ ЗДЕСЬ!
+st.set_page_config(page_title="Редактор сценариев", layout="wide")
 # ======== Загрузка и сохранение пресетов ========
 PRESET_PATH = "presets.json"
 
@@ -21,7 +22,6 @@ presets = load_presets()
 preset_names = list(presets.keys())
 
 # ======== Выбор сценария и действие ========
-st.set_page_config(page_title="Редактор сценариев", layout="wide")
 st.title("📋 Редактор сценариев девелопмента")
 
 st.sidebar.header("Сценарии")
