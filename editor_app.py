@@ -1,4 +1,4 @@
-# Streamlit MVP: Добавлены фазы доходов/расходов (Construction, Operation, Exit)
+# Streamlit MVP: Финансирование по фазам + Торнадо-анализ
 import streamlit as st
 import json
 import os
@@ -8,6 +8,7 @@ import plotly.express as px
 from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 from io import BytesIO
+import copy
 
 st.set_page_config(page_title="Редактор сценариев", layout="wide")
 
@@ -109,4 +110,23 @@ if selected:
     fig_cf = px.bar(df_cf, x="Год", y="Cash Flow (€)", title="📊 Кэшфлоу по фазам проекта")
     st.plotly_chart(fig_cf)
 
-    st.success("Фазы учтены: Строительство, Продажа, Операции")
+    # ===== 🌪 Анализ чувствительности (торнадо) =====
+    st.subheader("🌪 Торнадо-анализ чувствительности NPV")
+    sensitivity_data = []
+    base_npv = result['npv']
+    for fn, attrs in updated_params.items():
+        for key in [k for k in attrs if k in ["sale_price", "capex", "noi_margin"]]:
+            for delta in [-0.2, 0.2]:
+                test_params = copy.deepcopy(updated_params)
+                test_params[fn][key] *= 1 + delta
+                res = phased_cashflow(new_mix, test_params)
+                sensitivity_data.append({
+                    "Параметр": f"{fn} - {key}",
+                    "Изменение": f"{int(delta*100)}%",
+                    "NPV": res['npv']
+                })
+    df_sens = pd.DataFrame(sensitivity_data)
+    fig_tornado = px.bar(df_sens, x="NPV", y="Параметр", color="Изменение", orientation="h", title="Торнадо-график чувствительности NPV")
+    st.plotly_chart(fig_tornado)
+
+    st.success("Чувствительность учтена к ключевым параметрам")
