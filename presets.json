@@ -1,9 +1,9 @@
 {
-  "Scenario 1": {
+  "default": {
     "bgp": 20000,
     "discount_rate": 0.08,
     "years": 10,
-    "description": "🏢 Смешанный жилой и коммерческий проект",
+    "description": "🏗️ Базовый сценарий: жилые, отельные и коммерческие объекты",
     "mix": {
       "Stan": 50,
       "Hotel": 20,
@@ -19,17 +19,64 @@
       "Restorani": { "capex": 1200, "lease_price": 18, "noi_margin": 0.28, "parking_ratio": 0.033 }
     }
   },
-  "Scenario 2": {
-    "bgp": 15000,
+  "Hotel Resort": {
+    "bgp": 25000,
     "discount_rate": 0.09,
-    "years": 8,
-    "description": "🏨 Туристический кластер с апартаментами и отелем",
+    "years": 12,
+    "description": "🏨 Курортный проект с отелем 4*, жилыми апартаментами и коммерцией",
+    "mix": {
+      "Stan": 30,
+      "Hotel": 40,
+      "Turistički objekti": 15,
+      "Poslovni prostor": 10,
+      "Restorani": 5
+    },
+    "parameters": {
+      "Stan": { "capex": 980, "sale_price": 2200, "parking_ratio": 0.012 },
+      "Hotel": { "capex": 3700, "revpar": 220, "occupancy": 0.55, "noi_margin": 0.27, "parking_ratio": 0.011 },
+      "Turistički objekti": { "capex": 1300, "revpar": 100, "occupancy": 0.47, "noi_margin": 0.20, "parking_ratio": 0.009 },
+      "Poslovni prostor": { "capex": 1150, "sale_price": 1900, "lease_price": 15, "noi_margin": 0.25, "parking_ratio": 0.017 },
+      "Restorani": { "capex": 1250, "lease_price": 19, "noi_margin": 0.30, "parking_ratio": 0.035 }
+    }
+  },
+  "Residential Core": {
+    "bgp": 18000,
+    "discount_rate": 0.07,
+    "years": 9,
+    "description": "🏢 Основной жилой проект с небольшим коммерческим сегментом",
+    "mix": {
+      "Stan": 70,
+      "Hotel": 10,
+      "Turistički objekti": 5,
+      "Poslovni prostor": 10,
+      "Restorani": 5
+    },
+    "parameters": {
+      "Stan": { "capex": 920, "sale_price": 2000, "parking_ratio": 0.011 },
+      "Hotel": { "capex": 3400, "revpar": 180, "occupancy": 0.48, "noi_margin": 0.24, "parking_ratio": 0.010 },
+      "Turistički objekti": { "capex": 1200, "revpar": 90, "occupancy": 0.42, "noi_margin": 0.17, "parking_ratio": 0.007 },
+      "Poslovni prostor": { "capex": 1080, "sale_price": 1750, "lease_price": 13, "noi_margin": 0.22, "parking_ratio": 0.015 },
+      "Restorani": { "capex": 1150, "lease_price": 17, "noi_margin": 0.27, "parking_ratio": 0.032 }
+    }
+  },
+  "Mixed-Use Center": {
+    "bgp": 22000,
+    "discount_rate": 0.085,
+    "years": 11,
+    "description": "🏙️ Комбинированный жилой, офисный и туристический комплекс",
     "mix": {
       "Stan": 40,
-      "Hotel": 35,
-      "Turistički objekti": 15,
-      "Poslovni prostor": 5,
+      "Hotel": 25,
+      "Turistički objekti": 10,
+      "Poslovni prostor": 20,
       "Restorani": 5
+    },
+    "parameters": {
+      "Stan": { "capex": 960, "sale_price": 2150, "parking_ratio": 0.012 },
+      "Hotel": { "capex": 3600, "revpar": 210, "occupancy": 0.53, "noi_margin": 0.26, "parking_ratio": 0.011 },
+      "Turistički objekti": { "capex": 1250, "revpar": 98, "occupancy": 0.46, "noi_margin": 0.19, "parking_ratio": 0.008 },
+      "Poslovni prostor": { "capex": 1120, "sale_price": 1850, "lease_price": 14, "noi_margin": 0.24, "parking_ratio": 0.016 },
+      "Restorani": { "capex": 1200, "lease_price": 18, "noi_margin": 0.28, "parking_ratio": 0.034 }
     }
   }
 }
